@@ -8,6 +8,7 @@ metadata:
     - ${{ values.db_type_short }}
   annotations:
     dbaas.redhat.com/connection-url: "${{ values.db_standard_url }}"
+    dbaas.redhat.com/db-cli-command: "${{ values.db_cli_command }}"
 spec:
   type: database
   owner: ${{ values.owner }}

@@ -88,15 +88,13 @@ spec:
           db_type_short: ${{ "postgres" if parameters.db_type == "postgresql" else "mysql" }}
           owner: ${{ user.entity.metadata.name }}
           db_standard_url: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_standard_url }}
+          db_cli_command: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_cli_command }}
 
     - id: publish-catalog-entity
       name: Publish Catalog Entity
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=loopandloop&repo=aap-self-service-database
-        # No slashes in the branch name: GitHub "blob" URLs with a slash in the
-        # ref are misparsed by Backstage's GitHub URL reader (it splits the ref
-        # on the first "/"), which made catalog:register fail with 400.
         branchName: resources-${{ parameters.db_name }}
         title: "Register catalog entity for ${{ parameters.db_name }}"
         description: |
@@ -109,11 +107,10 @@ spec:
       name: Register Catalog Entity
       action: catalog:register
       input:
-        # Registers from the PR branch directly so the entity shows up immediately,
-        # without waiting for the PR above to be merged.
-        catalogInfoUrl: https://github.com/loopandloop/aap-self-service-database/blob/resources-${{ parameters.db_name }}/resources/${{ parameters.db_name }}/catalog-info.yaml
+        repoContentsUrl: ${{ steps['publish-catalog-entity'].output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'   # ← just the filename, no path repetition
+      # 3. This surfaces results back to the requester once the job completes
 
-  # 3. This surfaces results back to the requester once the job completes
   output:
     links:
       - title: Open AAP Job
