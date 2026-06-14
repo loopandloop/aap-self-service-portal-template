@@ -98,8 +98,9 @@ spec:
       name: Register Catalog Entity
       action: catalog:register
       input:
-        catalogInfoUrl: https://github.com/loopandloop/aap-self-service-database/blob/register-${{ parameters.db_name }}/resources/${{ parameters.db_name }}/catalog-info.yaml
-
+        repoContentsUrl: ${{ steps['publish-catalog-entity'].output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+        
   output:
     text:
       - title: 'DBaaS Provisioning Requested Successfully.'
