@@ -94,7 +94,10 @@ spec:
       action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=loopandloop&repo=aap-self-service-database
-        branchName: resources/${{ parameters.db_name }}
+        # No slashes in the branch name: GitHub "blob" URLs with a slash in the
+        # ref are misparsed by Backstage's GitHub URL reader (it splits the ref
+        # on the first "/"), which made catalog:register fail with 400.
+        branchName: resources-${{ parameters.db_name }}
         title: "Register catalog entity for ${{ parameters.db_name }}"
         description: |
           Registers the Backstage Resource entity for the ${{ parameters.db_name }}
@@ -108,7 +111,7 @@ spec:
       input:
         # Registers from the PR branch directly so the entity shows up immediately,
         # without waiting for the PR above to be merged.
-        catalogInfoUrl: https://github.com/loopandloop/aap-self-service-database/blob/resources/${{ parameters.db_name }}/resources/${{ parameters.db_name }}/catalog-info.yaml
+        catalogInfoUrl: https://github.com/loopandloop/aap-self-service-database/blob/resources-${{ parameters.db_name }}/resources/${{ parameters.db_name }}/catalog-info.yaml
 
   # 3. This surfaces results back to the requester once the job completes
   output:
