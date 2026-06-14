@@ -71,13 +71,6 @@ spec:
             db_user: ${{ parameters.db_user }}
             db_password: ${{ parameters.db_password }}
 
-    - id: fetch-job-details
-      name: Fetch Job Details
-      action: http:backstage:request
-      input:
-        method: GET
-        path: /api/proxy/aap/api/controller/v2/jobs/${{ steps['launch-dbaas-job'].output.data.id }}/
-
     - id: fetch-catalog-entity
       name: Render Catalog Entity
       action: fetch:template
@@ -87,8 +80,8 @@ spec:
           db_name: ${{ parameters.db_name }}
           db_type: ${{ parameters.db_type }}
           db_type_short: ${{ (parameters.db_type == 'postgresql') and 'postgres' or 'mysql' }}
-          db_standard_url: ${{ steps['fetch-job-details'].output.body.artifacts.db_standard_url }}
-          db_cli_command: ${{ steps['fetch-job-details'].output.body.artifacts.db_cli_command }}
+          db_standard_url: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_standard_url }}
+          db_cli_command: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_cli_command }}
           owner: ${{ user.ref }}
 
     - id: publish-catalog-entity
@@ -120,8 +113,16 @@ spec:
           * **Admin Username:** ${{ parameters.db_user }}
 
           #### Connection Details
-          - **Standard URL:** ${{ steps['fetch-job-details'].output.body.artifacts.db_standard_url }}
-          - **CLI Command:** ${{ steps['fetch-job-details'].output.body.artifacts.db_cli_command }}
+          - **Standard URL:** ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_standard_url }}
+          - **CLI Command:** ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_cli_command }}
+
+      # 🔍 TEMPORARY DEBUG — remove once db_standard_url / db_cli_command above are confirmed populated
+      - title: DEBUG - events tail
+        content: |
+          Total events: ${{ steps['launch-dbaas-job'].output.data.events.length }}
+          Last event type: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event }}
+          ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data | dump }}
+
     links:
       - title: Open AAP Job
         url: ${{ steps['launch-dbaas-job'].output.data.url }}
