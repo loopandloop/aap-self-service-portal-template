@@ -75,7 +75,7 @@ spec:
       name: Render Catalog Entity
       action: fetch:template
       input:
-        url: ./catalog-template
+        url: ../catalog-template
         values:
           db_name: ${{ parameters.db_name }}
           db_type: ${{ parameters.db_type }}
