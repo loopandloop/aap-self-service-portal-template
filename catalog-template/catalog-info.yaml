@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ${{ values.db_name | replace("_", "-") }}-${{ values.db_type_short }}-vm
+  description: "${{ values.db_type }} database VM provisioned via Ansible Automation Platform"
+  tags:
+    - database
+    - ${{ values.db_type_short }}
+  annotations:
+    dbaas/connection-url: "${{ values.db_standard_url }}"
+spec:
+  type: database
+  owner: ${{ values.owner }}
+  lifecycle: production

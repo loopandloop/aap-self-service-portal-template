@@ -1,0 +1,66 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: dbaas-vm-lifecycle
+  title: Database VM Lifecycle Manager
+  description: Start, stop, or restart a database VM you previously provisioned.
+  tags:
+    - database
+    - openshift
+    - ansible
+spec:
+  owner: guest
+  type: service
+
+  # 1. This builds the Frontend Form UI steps in the Portal
+  parameters:
+    - title: Select VM and Action
+      required:
+        - vm_name
+        - action
+      properties:
+        vm_name:
+          title: Your Database VM
+          type: string
+          description: Only databases you provisioned are shown.
+          ui:field: OwnedEntityPicker
+          ui:options:
+            catalogFilter:
+              kind: Resource
+              spec.type: database
+        action:
+          title: Action
+          type: string
+          enum:
+            - start
+            - stop
+            - restart
+          enumNames:
+            - "Start"
+            - "Stop"
+            - "Restart"
+
+  # 2. This launches the AAP job that performs the lifecycle action
+  steps:
+    - id: launch-lifecycle-job
+      name: Running ${{ parameters.action }} on ${{ parameters.vm_name }}...
+      action: rhaap:launch-job-template
+      input:
+        token: ${{ secrets.aapToken }}
+        values:
+          template: "DBaaS VM Lifecycle Manager"
+          extraVariables:
+            vm_name: ${{ parameters.vm_name }}
+            action: ${{ parameters.action }}
+
+  # 3. This surfaces results back to the requester once the job completes
+  output:
+    text:
+      - title: Result
+        content: |
+          - **VM:** ${{ parameters.vm_name }}
+          - **Action:** ${{ parameters.action }}
+          - **Status:** ${{ steps['launch-lifecycle-job'].output.data.status }}
+    links:
+      - title: Open AAP Job
+        url: ${{ steps['launch-lifecycle-job'].output.data.url }}

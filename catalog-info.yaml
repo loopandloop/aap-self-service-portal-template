@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: dbaas-templates
+  description: DBaaS provisioning and lifecycle templates
+spec:
+  targets:
+    - ./dbaas-vm-provisioner/template.yaml
+    - ./dbaas-vm-lifecycle/template.yaml
