@@ -87,9 +87,10 @@ spec:
           db_type: ${{ parameters.db_type }}
           db_type_short: ${{ "postgres" if parameters.db_type == "postgresql" else "mysql" }}
           owner: ${{ user.entity.metadata.name }}
+          owner: ${{ user.ref }}
           db_standard_url: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_standard_url }}
           db_cli_command: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_cli_command }}
-
+        
     - id: publish-catalog-entity
       name: Publish Catalog Entity
       action: publish:github:pull-request
