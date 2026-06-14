@@ -23,11 +23,11 @@ spec:
           title: Your Database VM
           type: string
           description: Only databases you provisioned are shown.
-          ui:field: EntityPicker
+          ui:field: OwnedEntityPicker
           ui:options:
             catalogFilter:
               kind: Resource
-              spec.type: database      
+              spec.type: database
         action:
           title: Action
           type: string
@@ -43,7 +43,7 @@ spec:
   # 2. This launches the AAP job that performs the lifecycle action
   steps:
     - id: launch-lifecycle-job
-      name: Running ${{ parameters.action }} on ${{ parameters.vm_name }}...
+      name: Running ${{ parameters.action }} on ${{ parameters.vm_name }}
       action: rhaap:launch-job-template
       input:
         token: ${{ secrets.aapToken }}
@@ -60,7 +60,8 @@ spec:
         content: |
           - **VM:** ${{ parameters.vm_name }}
           - **Action:** ${{ parameters.action }}
-          - **Status:** ${{ steps['launch-lifecycle-job'].output.data.status }}
+          - **Job Status:** ${{ steps['launch-lifecycle-job'].output.data.status }}
+          - **Lifecycle Result:** ${{ steps['launch-lifecycle-job'].output.data.events[steps['launch-lifecycle-job'].output.data.events.length - 1].event_data.artifact_data.vm_lifecycle_status }}
     links:
       - title: Open AAP Job
         url: ${{ steps['launch-lifecycle-job'].output.data.url }}
