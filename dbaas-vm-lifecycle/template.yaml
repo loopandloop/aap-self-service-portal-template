@@ -23,11 +23,11 @@ spec:
           title: Your Database VM
           type: string
           description: Only databases you provisioned are shown.
-          ui:field: OwnedEntityPicker
+          ui:field: EntityPicker
           ui:options:
             catalogFilter:
               kind: Resource
-              spec.type: database
+              spec.type: database      
         action:
           title: Action
           type: string
