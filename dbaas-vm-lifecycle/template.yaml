@@ -11,7 +11,6 @@ metadata:
 spec:
   owner: guest
   type: service
-
   # 1. This builds the Frontend Form UI steps in the Portal
   parameters:
     - title: Select VM and Action
@@ -23,11 +22,11 @@ spec:
           title: Your Database VM
           type: string
           description: Only databases you provisioned are shown.
-          ui:field: OwnedEntityPicker
+          ui:field: EntityPicker
           ui:options:
             catalogFilter:
               kind: Resource
-              spec.type: database
+              spec.type: database      
         action:
           title: Action
           type: string
@@ -39,11 +38,10 @@ spec:
             - "Start"
             - "Stop"
             - "Restart"
-
   # 2. This launches the AAP job that performs the lifecycle action
   steps:
     - id: launch-lifecycle-job
-      name: Running ${{ parameters.action }} on ${{ parameters.vm_name }}
+      name: Running Provided activity on the selcted database
       action: rhaap:launch-job-template
       input:
         token: ${{ secrets.aapToken }}
@@ -52,7 +50,6 @@ spec:
           extraVariables:
             vm_name: ${{ parameters.vm_name }}
             action: ${{ parameters.action }}
-
   # 3. This surfaces results back to the requester once the job completes
   output:
     text:
@@ -60,8 +57,7 @@ spec:
         content: |
           - **VM:** ${{ parameters.vm_name }}
           - **Action:** ${{ parameters.action }}
-          - **Job Status:** ${{ steps['launch-lifecycle-job'].output.data.status }}
-          - **Lifecycle Result:** ${{ steps['launch-lifecycle-job'].output.data.events[steps['launch-lifecycle-job'].output.data.events.length - 1].event_data.artifact_data.vm_lifecycle_status }}
+          - **Status:** ${{ steps['launch-lifecycle-job'].output.data.status }}
     links:
       - title: Open AAP Job
         url: ${{ steps['launch-lifecycle-job'].output.data.url }}
