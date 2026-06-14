@@ -2,20 +2,18 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: dbaas-vm-provisioner
-  title: Database-as-a-Service (DBaaS)
+  title: Database-as-a-Service (DBaaS) Provisioner
   description: Automatically provision a dedicated PostgreSQL or MySQL database VM on OpenShift Virtualization via AAP.
   tags:
     - database
     - openshift
     - ansible
 spec:
-  owner: guest
+  owner: RedHat
   type: service
 
-  # 1. This builds the Frontend Form UI steps in the Portal
   parameters:
     - title: Database Specification Details
-      description: Provide the parameters for your new database engine
       required:
         - db_type
         - vm_size
@@ -26,7 +24,6 @@ spec:
         db_type:
           title: Database Engine Selection
           type: string
-          description: Choose the underlying database core engine type.
           default: postgresql
           enum:
             - postgresql
@@ -37,20 +34,19 @@ spec:
         vm_size:
           title: Virtual Machine Compute Size
           type: string
-          description: Select the CPU/RAM allocation for the underlying OpenShift Virtualization VM.
           default: small
           enum:
             - small
-            - mid
+            - medium
             - large
           enumNames:
-            - "Small (2 vCPU / 4Gi RAM)"
-            - "Mid (4 vCPU / 8Gi RAM)"
-            - "Large (8 vCPU / 16Gi RAM)"
+            - "Small (2 vCPU, 4GB RAM)"
+            - "Medium (4 vCPU, 8GB RAM)"
+            - "Large (8 vCPU, 16GB RAM)"
         db_name:
           title: Database Name
           type: string
-          description: Enter a unique identifier name for the database schema.
+          default: app-db
         db_user:
           title: Master Username
           type: string
@@ -60,7 +56,6 @@ spec:
           type: string
           ui:widget: password
 
-  # 2. This defines the Backend Actions: launch the AAP job, then register the result in the catalog
   steps:
     - id: launch-dbaas-job
       name: Creating your Database VM on OpenShift Virtualization...
@@ -76,76 +71,59 @@ spec:
             db_user: ${{ parameters.db_user }}
             db_password: ${{ parameters.db_password }}
 
+    - id: fetch-job-details
+      name: Fetch Job Details
+      action: http:backstage:request
+      input:
+        method: GET
+        path: /api/proxy/aap/api/controller/v2/jobs/${{ steps['launch-dbaas-job'].output.data.id }}/
+
     - id: fetch-catalog-entity
       name: Render Catalog Entity
       action: fetch:template
       input:
-        url: ../catalog-template
-        targetPath: ./catalog
+        url: ./catalog-template
         values:
           db_name: ${{ parameters.db_name }}
           db_type: ${{ parameters.db_type }}
-          db_type_short: ${{ "postgres" if parameters.db_type == "postgresql" else "mysql" }}
-          # owner: ${{ user.entity.metadata.name }}
+          db_type_short: ${{ (parameters.db_type == 'postgresql') and 'postgres' or 'mysql' }}
+          db_standard_url: ${{ steps['fetch-job-details'].output.body.artifacts.db_standard_url }}
+          db_cli_command: ${{ steps['fetch-job-details'].output.body.artifacts.db_cli_command }}
           owner: ${{ user.ref }}
-          db_standard_url: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_standard_url }}
-          db_cli_command: ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_cli_command }}
 
     - id: publish-catalog-entity
       name: Publish Catalog Entity
-      action: publish:github:push
+      action: publish:github:pull-request
       input:
         repoUrl: github.com?owner=loopandloop&repo=aap-self-service-database
-        targetBranch: main
-        sourcePath: ./catalog
+        branchName: register-${{ parameters.db_name }}
+        title: "Register database: ${{ parameters.db_name }}"
+        description: "Adds catalog entry for ${{ parameters.db_name }}"
         targetPath: resources/${{ parameters.db_name }}
 
     - id: register-catalog-entity
       name: Register Catalog Entity
       action: catalog:register
       input:
-        repoContentsUrl: ${{ steps['publish-catalog-entity'].output.repoContentsUrl }}
-        catalogInfoPath: '/catalog-info.yaml'
-        
-    # - id: publish-catalog-entity
-    #   name: Publish Catalog Entity
-    #   action: publish:github:pull-request
-    #   input:
-    #     repoUrl: github.com?owner=loopandloop&repo=aap-self-service-database
-    #     branchName: resources-${{ parameters.db_name }}
-    #     title: "Register catalog entity for ${{ parameters.db_name }}"
-    #     description: |
-    #       Registers the Backstage Resource entity for the ${{ parameters.db_name }}
-    #       ${{ parameters.db_type }} VM provisioned via AAP.
-    #     sourcePath: ./catalog
-    #     targetPath: resources/${{ parameters.db_name }}
-
-    # - id: register-catalog-entity
-    #   name: Register Catalog Entity
-    #   action: catalog:register
-    #   input:
-    #     repoContentsUrl: ${{ steps['publish-catalog-entity'].output.repoContentsUrl }}
-    #     catalogInfoPath: '/catalog-info.yaml'   # ← just the filename, no path repetition
-    #   # 3. This surfaces results back to the requester once the job completes
+        catalogInfoUrl: https://github.com/loopandloop/aap-self-service-database/blob/register-${{ parameters.db_name }}/resources/${{ parameters.db_name }}/catalog-info.yaml
 
   output:
+    text:
+      - title: 'DBaaS Provisioning Requested Successfully.'
+        content: |
+          Your custom instance has been successfully provisioned on OpenShift Virtualization.
+
+          ### Your Database Connection Summary
+
+          * **Database Engine:** ${{ parameters.db_type }}
+          * **Target Schema:** ${{ parameters.db_name }}
+          * **Admin Username:** ${{ parameters.db_user }}
+
+          #### Connection Details
+          - **Standard URL:** ${{ steps['fetch-job-details'].output.body.artifacts.db_standard_url }}
+          - **CLI Command:** ${{ steps['fetch-job-details'].output.body.artifacts.db_cli_command }}
     links:
       - title: Open AAP Job
         url: ${{ steps['launch-dbaas-job'].output.data.url }}
-      - title: Catalog Entity Pull Request
+      - title: View Registration Pull Request
         url: ${{ steps['publish-catalog-entity'].output.remoteUrl }}
-      - title: Open Catalog Entity
-        icon: catalog
-        entityRef: ${{ steps['register-catalog-entity'].output.entityRef }}
-    text:
-      - title: Database Connection Summary
-        content: |
-          * **Database Engine:** ${{ parameters.db_type }}
-          * **Database Name:** ${{ parameters.db_name }}
-          * **Admin Username:** ${{ parameters.db_user }}
-
-          **Standard Connection URL:**
-          ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_standard_url }}
-
-          **CLI Command:**
-          ${{ steps['launch-dbaas-job'].output.data.events[steps['launch-dbaas-job'].output.data.events.length - 1].event_data.artifact_data.db_cli_command }}
