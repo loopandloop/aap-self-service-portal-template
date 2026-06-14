@@ -1,0 +1,8 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: dbaas-vm-provisioner
+  description: DBaaS VM provisioner template
+spec:
+  targets:
+    - ./template.yaml
